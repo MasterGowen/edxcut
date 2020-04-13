@@ -134,14 +134,14 @@ enroll_student <email>      - enroll student in CCX instance
     if args.ccx or args.course_id.startswith("ccx-v1:"):
         apimod = ccXapi  # enable additioanl CCX-specific commands for CCX course instances
 
-    # try:
-    ea = apimod(base=args.site_base_url, username=args.username, password=args.password,
-                course_id=args.course_id, data_dir=args.data_dir, verbose=args.verbose,
-                studio=args.studio, auth=args.auth)
-    # except Exception as err:
-    #     print(err)
-    #     print("Error accessing OpenEdX site - if you're accessing Studio, did you specify the -S flag?")
-    #     sys.exit(-1)
+    try:
+        ea = apimod(base=args.site_base_url, username=args.username, password=args.password,
+                    course_id=args.course_id, data_dir=args.data_dir, verbose=args.verbose,
+                    studio=args.studio, auth=args.auth)
+    except Exception as err:
+        print(err)
+        print("Error accessing OpenEdX site - if you're accessing Studio, did you specify the -S flag?")
+        sys.exit(-1)
 
     ret = None
     if args.data_file:

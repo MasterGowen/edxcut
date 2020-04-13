@@ -66,7 +66,6 @@ class edXapi(object):
         url = '%s/%s' % (self.BASE, "signin" if self.is_studio else "login")
         try:
             r1 = self.ses.get(url)
-            print(r1.content)
         except Exception as err:
             traceback.print_exc()
             raise Exception("[edxapi] failed to get login page %s, err=%s" % (url, err))
