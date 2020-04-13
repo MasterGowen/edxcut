@@ -3,18 +3,19 @@ API interface to edx platform site.
 Handles logins, and performs queries.
 '''
 
-import os, sys
-import re
-import time
-import requests
-import pytest
 import json
+import os
+import re
+import sys
+import time
 import traceback
-
 from collections import OrderedDict, defaultdict
 from io import StringIO
+
+import pytest
+import requests
 from lxml import etree
-from pysrt import SubRipTime, SubRipItem, SubRipFile
+from pysrt import SubRipTime, SubRipItem
 
 
 # -----------------------------------------------------------------------------
@@ -65,13 +66,14 @@ class edXapi(object):
         url = '%s/%s' % (self.BASE, "signin" if self.is_studio else "login")
         try:
             r1 = self.ses.get(url)
+            print(r1.content)
         except Exception as err:
             traceback.print_exc()
             raise Exception("[edxapi] failed to get login page %s, err=%s" % (url, err))
 
         self.csrf = None
         if not 'csrftoken' in self.ses.cookies:
-            m = re.search('name="csrfmiddlewaretoken" value="([^"]+)"', r1.content)
+            m = re.search(b'name="csrfmiddlewaretoken" value="([^"]+)"', r1.content)
             if 0 and m:
                 self.csrf = m.group(1)
                 print(("[edXapi.login] using %s for csrf" % self.csrf))
@@ -80,7 +82,7 @@ class edXapi(object):
                 raise Exception("[edXapi.login] error - no csrf token in login page")
         self.csrf = self.csrf or self.ses.cookies['csrftoken']
 
-        do_shiboleth_login = "Please choose your account provider" in r1.content
+        do_shiboleth_login = b"Please choose your account provider" in r1.content
         if do_shiboleth_login:
             return self.login_shiboleth(username, pw, r1)
 
@@ -94,7 +96,7 @@ class edXapi(object):
             print(("[edXapi] login ret = ", r2))
         if not r2.status_code == 200:
             print("[edXapi] Login failed!")
-            print((r2.text))
+            print(r2.text)
             return False
 
         if self.is_studio:
@@ -128,14 +130,14 @@ class edXapi(object):
                 'Select': 's',
                 }
         r2 = self.ses.post(url, data=data)
-        if not "Collaboration Account Login" in r2.content:
+        if not b"Collaboration Account Login" in r2.content:
             print("at r2:")
             print((r2.content))
             return
-        m = re.search('<form action="(.*)" ', r2.content)
+        m = re.search(b'<form action="(.*)" ', r2.content)
         if not m:
             print("oops, failed to get form action")
-            print((r2.content))
+            print(r2.content)
             return
         action = m.group(1)
         print(("action=%s" % action))
@@ -153,7 +155,7 @@ class edXapi(object):
                    }
         print(("headers=%s" % headers))
         r3 = self.ses.post(url, data=data, headers=headers)
-        if not "RelayState" in r3.content:
+        if not b"RelayState" in r3.content:
             print("at r3:")
             print((r3.content))
             return
@@ -698,7 +700,7 @@ class edXapi(object):
         rdat = ret.json()
         if (not nofail) and ('ErrMsg' in rdat):
             raise Exception("Failed to create course data=%s, ErrMsg=%s, ret=%s" % (
-            json.dumps(data, indent=4), rdat['ErrMsg'], rdat))
+                json.dumps(data, indent=4), rdat['ErrMsg'], rdat))
         return rdat
 
     def delete_course(self, course_key):
@@ -817,12 +819,12 @@ class edXapi(object):
             r4 = self.ses.get(eo)
         except Exception as err:
             raise Exception("[edxapi] Failed to retrieve course %s tarball, err=%s, traceback=%s" % (
-            self.course_id, err, traceback.format_exc()))
+                self.course_id, err, traceback.format_exc()))
 
         if 0:  # old slash export - deprecated
             if not r3.ok or (r3.status_code == 404):
                 url = '%s/export/slashes:%s+%s?_accept=application/x-tgz' % (
-                self.BASE, self.course_id.replace('/', '+'), sem)
+                    self.BASE, self.course_id.replace('/', '+'), sem)
                 r3 = self.ses.get(url)
 
         if len(r4.content) < 100:
@@ -1028,8 +1030,8 @@ class edXapi(object):
             if block_category:
                 if not block['category'] == block_category:
                     raise Exception("[edXapi.get_block_by_name_from_outline] expecting category=%s, got category=%s" % (
-                    block_category,
-                    block['category']))
+                        block_category,
+                        block['category']))
             url_name = cid.rsplit('@')[-1]
             if block_name == url_name:
                 the_block = block
@@ -1198,7 +1200,7 @@ class edXapi(object):
         ret = self.ses.delete(url, headers=self.headers)
         if not ret.status_code in [200, 204]:
             raise Exception("Failed to delete %s, ret=%s, url=%s, content=%s" % (
-            usage_key, ret.status_code, url, ret.content[:1000]))
+                usage_key, ret.status_code, url, ret.content[:1000]))
         if self.verbose:
             print(("Deleted %s, ret=%s" % (usage_key, ret.status_code)))
         return True
@@ -1291,7 +1293,7 @@ class edXapi(object):
         ret = self.ses.post(url, json=post_data, headers=self.headers)
         if not ret.status_code == 200:
             msg = "[edXapi] Failed to create new %s in course %s with post_data=%s" % (
-            category, self.course_id, str(post_data)[:200])
+                category, self.course_id, str(post_data)[:200])
             msg += "\nret=%s" % ret.content
             if 0:
                 print(("request: ", ret.request))
@@ -1449,7 +1451,7 @@ class edXapi(object):
                     counts['had_no_due'] += 1
                 if (counts['sequential'] % 10) == 0:
                     sys.stdout.write("  ...Processed %d chapters and %d sequentials (skipped %s)" % (
-                    counts['chapter'], counts['sequential'], counts['had_no_due']))
+                        counts['chapter'], counts['sequential'], counts['had_no_due']))
                     sys.stdout.flush()
         return counts
 
@@ -1497,12 +1499,12 @@ class edXapi(object):
                     'page': page,
                     }
             url = '%s/assets/%s/' % (
-            self.BASE, self.course_id)  # http://192.168.33.10:18010/assets/course-v1:edX+DemoX+Demo_Course/
+                self.BASE, self.course_id)  # http://192.168.33.10:18010/assets/course-v1:edX+DemoX+Demo_Course/
             self.headers['Accept'] = "application/json"
             ret = self.ses.get(url, params=data, headers=self.headers)
             if not ret.status_code == 200:
                 raise Exception('[edXapi.list_static_assets] Failed to get static asset loist, url=%s, err=%s' % (
-                url, ret.status_code))
+                    url, ret.status_code))
             retdat = ret.json()
             abyname = {x['display_name']: x for x in retdat['assets']}
             if name:
@@ -1560,7 +1562,7 @@ class edXapi(object):
         files = {'file': open(fn, 'rb')}
         data = {'format': 'json'}
         url = '%s/assets/%s/' % (
-        self.BASE, self.course_id)  # http://192.168.33.10:18010/assets/course-v1:edX+DemoX+Demo_Course/
+            self.BASE, self.course_id)  # http://192.168.33.10:18010/assets/course-v1:edX+DemoX+Demo_Course/
         self.headers['Accept'] = "application/json"
         self.headers['Referer'] = url
         ret = self.ses.post(url, files=files, data=data, headers=self.headers)
