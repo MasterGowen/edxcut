@@ -199,6 +199,9 @@ enroll_student <email>      - enroll student in CCX instance
     elif args.cmd == "get_course_metadata":
         ret = ea.get_course_metadata()
 
+    elif args.cmd == "get_course_advanced":
+        ret = ea.get_course_advanced()
+
     elif args.cmd == "update_course_metadata":
         if args.data:
             try:
